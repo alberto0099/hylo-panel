@@ -81,7 +81,7 @@ export default function App() {
     setFile(nextFile);
   }
 
-  async function publishHylo() {
+ async function publishHylo() {
   const cleanBody = body.trim();
   const cleanName = name.trim();
 
@@ -100,18 +100,45 @@ export default function App() {
   setPosting(true);
 
   try {
+    let imageUrl: string | null = null;
+
+    if (file) {
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const fileName = `panel-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("panel-images")
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("UPLOAD ERROR:", uploadError);
+        alert(`UPLOAD ERROR: ${uploadError.message}`);
+        throw uploadError;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("panel-images")
+        .getPublicUrl(fileName);
+
+      imageUrl = publicUrlData.publicUrl;
+    }
+
     const payload = {
       name: isAnonymous ? "" : cleanName || "Usuario",
       body: cleanBody,
       category,
       is_anonymous: isAnonymous,
-      image_url: null,
+      image_url: imageUrl,
       created_at: new Date().toISOString(),
     };
 
     console.log("PAYLOAD A INSERTAR:", payload);
-console.log("SUPABASE URL:", "https://leyncevwcnedyaynlcxl.supabase.co");
-console.log("INSERTANDO EN PANEL_POSTS...");
+    console.log("INSERTANDO EN PANEL_POSTS...");
 
     const { data, error } = await supabase
       .from("panel_posts")
