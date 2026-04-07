@@ -81,102 +81,101 @@ export default function App() {
     setFile(nextFile);
   }
 
- async function publishHylo() {
-  const cleanBody = body.trim();
-  const cleanName = name.trim();
+  async function publishHylo() {
+    const cleanBody = body.trim();
+    const cleanName = name.trim();
 
-  if (!cleanBody) {
-    setBlockedMsg("Escribe algo antes de publicar.");
-    closeConfirm();
-    return;
-  }
+    if (!cleanBody) {
+      setBlockedMsg("Escribe algo antes de publicar.");
+      closeConfirm();
+      return;
+    }
 
-  if (cleanBody.length > MAX_CHARS) {
-    setBlockedMsg(`Máximo ${MAX_CHARS} caracteres.`);
-    closeConfirm();
-    return;
-  }
+    if (cleanBody.length > MAX_CHARS) {
+      setBlockedMsg(`Máximo ${MAX_CHARS} caracteres.`);
+      closeConfirm();
+      return;
+    }
 
-  setPosting(true);
+    setPosting(true);
 
-  try {
-    let imageUrl: string | null = null;
+    try {
+      let imageUrl: string | null = null;
 
-    if (file) {
-      const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const fileName = `panel-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2)}.${fileExt}`;
+      if (file) {
+        const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const fileName = `panel-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("panel-images")
-        .upload(fileName, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
+        const { error: uploadError } = await supabase.storage
+          .from("panel-images")
+          .upload(fileName, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
 
-      if (uploadError) {
-        console.error("UPLOAD ERROR:", uploadError);
-        alert(`UPLOAD ERROR: ${uploadError.message}`);
-        throw uploadError;
+        if (uploadError) {
+          console.error("UPLOAD ERROR:", uploadError);
+          alert(`UPLOAD ERROR: ${uploadError.message}`);
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("panel-images")
+          .getPublicUrl(fileName);
+
+        imageUrl = publicUrlData.publicUrl;
       }
 
-      const { data: publicUrlData } = supabase.storage
-        .from("panel-images")
-        .getPublicUrl(fileName);
+      const payload = {
+        name: isAnonymous ? "" : cleanName || "Usuario",
+        body: cleanBody,
+        category,
+        is_anonymous: isAnonymous,
+        image_url: imageUrl,
+      };
 
-      imageUrl = publicUrlData.publicUrl;
+      console.log("PAYLOAD A INSERTAR:", payload);
+      console.log("INSERTANDO EN PANEL_POSTS...");
+
+      const { data, error } = await supabase
+        .from("panel_posts")
+        .insert([payload])
+        .select();
+
+      console.log("INSERT DATA:", data);
+      console.log("INSERT ERROR:", error);
+
+      if (error) {
+        alert(`INSERT ERROR: ${error.message}`);
+        throw error;
+      }
+
+      closeConfirm();
+
+      setName("");
+      setBody("");
+      setCategory("crushes");
+      setIsAnonymous(false);
+      setFile(null);
+      setBlockedMsg("");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      setSuccessClosing(false);
+      setSuccessOpen(true);
+    } catch (error: any) {
+      console.error("PUBLISH HYLO ERROR:", error);
+      alert(`PUBLISH HYLO ERROR: ${error?.message || "Error desconocido"}`);
+      closeConfirm();
+      setBlockedMsg("No se pudo publicar el hylo.");
+    } finally {
+      setPosting(false);
     }
-
-    const payload = {
-      name: isAnonymous ? "" : cleanName || "Usuario",
-      body: cleanBody,
-      category,
-      is_anonymous: isAnonymous,
-      image_url: imageUrl,
-      created_at: new Date().toISOString(),
-    };
-
-    console.log("PAYLOAD A INSERTAR:", payload);
-    console.log("INSERTANDO EN PANEL_POSTS...");
-
-    const { data, error } = await supabase
-      .from("panel_posts")
-      .insert([payload])
-      .select();
-
-    console.log("INSERT DATA:", data);
-    console.log("INSERT ERROR:", error);
-
-    if (error) {
-      alert(`INSERT ERROR: ${error.message}`);
-      throw error;
-    }
-
-    closeConfirm();
-
-    setName("");
-    setBody("");
-    setCategory("crushes");
-    setIsAnonymous(false);
-    setFile(null);
-    setBlockedMsg("");
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-
-    setSuccessClosing(false);
-    setSuccessOpen(true);
-  } catch (error: any) {
-    console.error("PUBLISH HYLO ERROR:", error);
-    alert(`PUBLISH HYLO ERROR: ${error?.message || "Error desconocido"}`);
-    closeConfirm();
-    setBlockedMsg("No se pudo publicar el hylo.");
-  } finally {
-    setPosting(false);
   }
-}
 
   return (
     <div className="page">
