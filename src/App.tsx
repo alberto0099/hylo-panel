@@ -12,6 +12,7 @@ const CATEGORY_OPTIONS = [
   { value: "actividades", emoji: "📆", label: "Actividades" },
   { value: "market", emoji: "🛒", label: "Mercado" },
   { value: "eventos", emoji: "🏟️", label: "Eventos" },
+  { value: "objetos_perdidos", emoji: "🔍", label: "Objetos perdidos" },
 ] as const;
 
 type CategoryValue = (typeof CATEGORY_OPTIONS)[number]["value"];
@@ -296,6 +297,7 @@ export default function App() {
               value={category}
               onChange={(e) => setCategory(e.target.value as CategoryValue)}
               disabled={posting}
+              className={category === "objetos_perdidos" ? "select-objetos-perdidos" : ""}
             >
               {CATEGORY_OPTIONS.map((item) => (
                 <option key={item.value} value={item.value}>
